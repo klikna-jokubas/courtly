@@ -74,3 +74,6 @@ class OpeningHours(models.Model):
 
     def __str__(self):
         return f"{self.sport_center.name} - {self.get_weekday_display()}"
+
+    
+    
