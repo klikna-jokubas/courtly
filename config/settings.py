@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     #courtly
-    'accounts',
+    'accounts.apps.AccountsConfig',
     'courts',
     'bookings',
 ]
