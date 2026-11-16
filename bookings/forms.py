@@ -17,7 +17,8 @@ class BookingForm(forms.ModelForm):
             )
         }
 
-    def __init__(self, *args, court=None, **kwargs):
+    
+    def __init__(self, *args, court=None, booking=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         now = timezone.localtime()
@@ -32,8 +33,17 @@ class BookingForm(forms.ModelForm):
                 Booking.BookingStatus.PENDING,
                 Booking.BookingStatus.CONFIRMED,
             ]
-        ).order_by("date", "start_time")
+        )
 
-        self.fields["time_slot"].queryset = available_slots
+        # During rescheduling, also allow the booking's current slot.
+        if booking:
+            available_slots = available_slots | TimeSlot.objects.filter(
+                id=booking.time_slot_id
+            )
+
+        self.fields["time_slot"].queryset = available_slots.distinct().order_by(
+            "date", "start_time"
+        )
 
         self.fields["time_slot"].label = "Available time slots"
+

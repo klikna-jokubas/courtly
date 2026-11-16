@@ -54,3 +54,89 @@ def my_bookings(request):
         "bookings": bookings
     })
 
+
+@login_required
+def cancel_booking(request, booking_id):
+    if request.method != "POST":
+        return redirect("my_bookings")
+
+    booking = get_object_or_404(
+        Booking,
+        id=booking_id,
+        user=request.user
+    )
+
+    if booking.status not in [
+        Booking.BookingStatus.PENDING,
+        Booking.BookingStatus.CONFIRMED,
+    ]:
+        messages.error(request, "This booking cannot be cancelled.")
+        return redirect("my_bookings")
+
+    booking.status = Booking.BookingStatus.CANCELLED
+    booking.save(update_fields=["status"])
+
+    messages.success(request, "Your booking has been cancelled.")
+
+    return redirect("my_bookings")
+
+
+
+@login_required
+def change_booking(request, booking_id):
+    booking = get_object_or_404(
+        Booking.objects.select_related("court", "time_slot"),
+        id=booking_id,
+        user=request.user
+    )
+
+    if booking.status not in [
+        Booking.BookingStatus.PENDING,
+        Booking.BookingStatus.CONFIRMED,
+    ]:
+        messages.error(request, "This booking cannot be changed.")
+        return redirect("my_bookings")
+
+    if request.method == "POST":
+        form = BookingForm(
+            request.POST,
+            court=booking.court,
+            booking=booking
+        )
+
+        if form.is_valid():
+            new_time_slot = form.cleaned_data["time_slot"]
+
+            try:
+                with transaction.atomic():
+                    # Lock the booking while changing its time slot.
+                    booking = Booking.objects.select_for_update().get(
+                        id=booking.id,
+                        user=request.user
+                    )
+
+                    booking.time_slot = new_time_slot
+                    booking.save(update_fields=["time_slot"])
+
+                messages.success(
+                    request,
+                    "Your booking time has been changed successfully!"
+                )
+                return redirect("my_bookings")
+
+            except IntegrityError:
+                messages.error(
+                    request,
+                    "Sorry, this time slot is no longer available."
+                )
+    else:
+        form = BookingForm(
+            court=booking.court,
+            booking=booking,
+            initial={"time_slot": booking.time_slot}
+        )
+
+    return render(request, "bookings/change_booking.html", {
+        "form": form,
+        "booking": booking,
+    })
