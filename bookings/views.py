@@ -2,10 +2,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from decimal import Decimal
 
 from courts.models import Court
 from .forms import BookingForm
-from .models import Booking
+from .models import Booking, Payment
+
 
 
 @login_required
@@ -24,8 +26,31 @@ def create_booking(request, court_id):
                 with transaction.atomic():
                     booking.save()
 
-                messages.success(request, "Your booking was created successfully!")
-                return redirect("court_detail", court_id=court.id)
+                    # Calculate booking duration in hours.
+                    start = booking.time_slot.start_time
+                    end = booking.time_slot.end_time
+
+                    duration_minutes = (
+                        end.hour * 60 + end.minute
+                        - start.hour * 60 - start.minute
+                    ) 
+
+                    duration = Decimal(duration_minutes) / Decimal("60")
+
+                    amount = court.price_per_hour * duration
+
+                    # Create payment for the booking.
+                    Payment.objects.create(
+                        booking=booking,
+                        amount=amount,
+                        status=Payment.PaymentStatus.PENDING
+                    )
+
+                messages.success(
+                    request,
+                    "Booking created! Please complete your payment."
+                )
+                return redirect("pay_booking", booking_id=booking.id)
 
             except IntegrityError:
                 messages.error(
@@ -41,12 +66,14 @@ def create_booking(request, court_id):
     })
 
 
+
 @login_required
 def my_bookings(request):
     bookings = (
         Booking.objects
         .filter(user=request.user)
         .select_related("court", "time_slot", "court__sport_center")
+        .prefetch_related("payment")
         .order_by("-time_slot__date", "-time_slot__start_time")
     )
 
@@ -139,4 +166,39 @@ def change_booking(request, booking_id):
     return render(request, "bookings/change_booking.html", {
         "form": form,
         "booking": booking,
+    })
+
+
+@login_required
+def pay_booking(request, booking_id):
+    booking = get_object_or_404(
+        Booking.objects.select_related("court", "time_slot"),
+        id=booking_id,
+        user=request.user
+    )
+
+    if booking.status != Booking.BookingStatus.PENDING:
+        messages.error(request, "This booking cannot be paid for.")
+        return redirect("my_bookings")
+
+    payment = get_object_or_404(Payment, booking=booking)
+
+    if payment.status == Payment.PaymentStatus.PAID:
+        messages.info(request, "This booking has already been paid.")
+        return redirect("my_bookings")
+
+    if request.method == "POST":
+        with transaction.atomic():
+            payment.status = Payment.PaymentStatus.PAID
+            payment.save(update_fields=["status"])
+
+            booking.status = Booking.BookingStatus.CONFIRMED
+            booking.save(update_fields=["status"])
+
+        messages.success(request, "Payment successful! Your booking is confirmed.")
+        return redirect("my_bookings")
+
+    return render(request, "bookings/pay_booking.html", {
+        "booking": booking,
+        "payment": payment,
     })

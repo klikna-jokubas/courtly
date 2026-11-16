@@ -56,6 +56,7 @@
                             <th>Date</th>
                             <th>Time</th>
                             <th>Status</th>
+                            <th>Payment</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -90,6 +91,22 @@
                                         </span>
                                     {% endif %}
                                 </td>
+
+                                <td>
+                                    {% if booking.payment.status == "PAID" %}
+                                        <span class="badge bg-success">Paid</span>
+
+                                    {% elif booking.status == "PENDING" %}
+                                        <a href="{% url 'pay_booking' booking.id %}"
+                                        class="btn btn-primary btn-sm">
+                                            Pay Now
+                                        </a>
+
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+
                                 <td>
                                     {% if booking.status == "PENDING" or booking.status == "CONFIRMED" %}
 
