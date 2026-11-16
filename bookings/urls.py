@@ -24,4 +24,9 @@ urlpatterns = [
     views.change_booking,
     name="change_booking"
     ),
+    path(
+    "<int:booking_id>/pay/",
+    views.pay_booking,
+    name="pay_booking"
+    ),
 ]
