@@ -12,6 +12,7 @@
 
 <body class="bg-light">
 
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/">Courtly</a>
@@ -21,6 +22,11 @@
                 <span class="text-white">
                     Hello, {{ user.username }}
                 </span>
+
+                <a href="{% url 'my_bookings' %}"
+                   class="btn btn-outline-light btn-sm">
+                    My Bookings
+                </a>
 
                 <form method="POST" action="{% url 'logout' %}">
                     {% csrf_token %}
@@ -32,6 +38,7 @@
                 <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm">
                     Login
                 </a>
+
                 <a href="{% url 'register' %}" class="btn btn-primary btn-sm">
                     Register
                 </a>
@@ -43,6 +50,7 @@
         </div>
     </div>
 </nav>
+
 
 
 <main class="container py-5">
