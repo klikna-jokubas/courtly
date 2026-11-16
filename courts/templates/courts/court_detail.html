@@ -80,6 +80,22 @@
                 €{{ court.price_per_hour }} / hour
             </h3>
 
+            <hr>
+
+            {% if user.is_authenticated %}
+                <a href="{% url 'create_booking' court.id %}"
+                class="btn btn-primary btn-lg">
+                    Book now
+                </a>
+            {% else %}
+                <p class="text-muted">
+                    Please log in to book this court.
+                </p>
+                <a href="{% url 'login' %}" class="btn btn-primary">
+                    Login
+                </a>
+            {% endif %}
+
         </div>
     </div>
 

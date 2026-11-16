@@ -48,6 +48,17 @@ class Booking(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["time_slot"],
+                condition=models.Q(
+                    status__in=["PENDING", "CONFIRMED"]
+                ),
+                name="unique_active_booking_per_slot"
+            )
+        ]
+
     def __str__(self):
         return f"Booking #{self.id} - {self.user.username}"
 
